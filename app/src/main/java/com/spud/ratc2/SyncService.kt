@@ -7,14 +7,28 @@ import android.os.IBinder
 import androidx.core.app.NotificationCompat
 
 class SyncService : Service() {
+    private var bot: TelegramBot? = null
+    private var thread: Thread? = null
+
     override fun onCreate() {
         super.onCreate()
         createChannel()
         startForeground(1, notif())
+        val dispatcher = CommandDispatcher(applicationContext)
+        bot = TelegramBot(Config.BOT_TOKEN) { chat, cmd ->
+            dispatcher.dispatch(chat, cmd)
+        }
+        thread = Thread { bot?.start() }.also { it.start() }
     }
 
     override fun onStartCommand(i: Intent?, f: Int, s: Int): Int = START_STICKY
     override fun onBind(intent: Intent?): IBinder? = null
+
+    override fun onDestroy() {
+        bot?.stop()
+        thread?.interrupt()
+        super.onDestroy()
+    }
 
     private fun createChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
