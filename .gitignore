@@ -1,0 +1,11 @@
+.gradle/
+gradle/
+build/
+gradle-8.7/
+gradle-8.7-bin.zip
+*.apk
+*.aab
+local.properties
+.idea/
+*.iml
+.DS_Store
