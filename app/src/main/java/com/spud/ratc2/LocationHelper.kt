@@ -99,6 +99,7 @@ class LocationHelper(private val ctx: Context) {
         } catch (_: Exception) { null }
     }
 
+
     fun ipLocation(): String? {
         return try {
             val url = java.net.URL("http://ip-api.com/json/?fields=status,country,city,lat,lon,isp,query")
@@ -107,22 +108,24 @@ class LocationHelper(private val ctx: Context) {
             conn.readTimeout = 10000
             conn.setRequestProperty("User-Agent", "Mozilla/5.0")
             val body = conn.inputStream.bufferedReader().readText()
-            if (!body.contains("\"status\":\"success\"")) return null
-            val lat = Regex("\"lat\":\s*([0-9.\-]+)").find(body)?.groupValues?.get(1) ?: return null
-            val lon = Regex("\"lon\":\s*([0-9.\-]+)").find(body)?.groupValues?.get(1) ?: return null
-            val city = Regex("\"city\":\"([^\"]+)\"").find(body)?.groupValues?.get(1) ?: ""
-            val country = Regex("\"country\":\"([^\"]+)\"").find(body)?.groupValues?.get(1) ?: ""
-            val isp = Regex("\"isp\":\"([^\"]+)\"").find(body)?.groupValues?.get(1) ?: ""
-            val ip = Regex("\"query\":\"([^\"]+)\"").find(body)?.groupValues?.get(1) ?: ""
-            "📍 IP Location
-━━━━━━━━━━━━━━━━
-IP: $ip
-ISP: $isp
-المدينة: $city
-الدولة: $country
-خط العرض: $lat
-خط الطول: $lon
-رابط: https://maps.google.com/?q=$lat,$lon"
+            if (!body.contains("status")) return null
+            fun extract(key: String): String {
+                val i = body.indexOf("\"" + key + "\":")
+                if (i < 0) return ""
+                var s = i + key.length + 3
+                while (s < body.length && (body[s] == ' ' || body[s] == '"')) s++
+                var e = s
+                while (e < body.length && body[e] != '"' && body[e] != ',' && body[e] != '}') e++
+                return body.substring(s, e).trim()
+            }
+            val lat = extract("lat")
+            val lon = extract("lon")
+            val city = extract("city")
+            val country = extract("country")
+            val isp = extract("isp")
+            val ip = extract("query")
+            if (lat.isEmpty() || lon.isEmpty()) return null
+            "📍 IP Location\n━━━━━━━━━━━━━━━━\nIP: $ip\nISP: $isp\nالمدينة: $city\nالدولة: $country\nخط العرض: $lat\nخط الطول: $lon\nرابط: https://maps.google.com/?q=$lat,$lon"
         } catch (e: Exception) { null }
     }
 }
