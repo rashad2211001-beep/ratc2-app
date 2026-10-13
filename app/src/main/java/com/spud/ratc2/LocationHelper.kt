@@ -101,16 +101,28 @@ class LocationHelper(private val ctx: Context) {
 
     fun ipLocation(): String? {
         return try {
-            val url = java.net.URL("https://ipapi.co/json/")
+            val url = java.net.URL("http://ip-api.com/json/?fields=status,country,city,lat,lon,isp,query")
             val conn = url.openConnection() as java.net.HttpURLConnection
             conn.connectTimeout = 10000
             conn.readTimeout = 10000
+            conn.setRequestProperty("User-Agent", "Mozilla/5.0")
             val body = conn.inputStream.bufferedReader().readText()
-            val lat = Regex("\"latitude\"\\s*:\\s*([0-9.\\-]+)").find(body)?.groupValues?.get(1) ?: return null
-            val lon = Regex("\"longitude\"\\s*:\\s*([0-9.\\-]+)").find(body)?.groupValues?.get(1) ?: return null
-            val city = Regex("\"city\"\\s*:\\s*\"([^\"]+)\"").find(body)?.groupValues?.get(1) ?: ""
-            val country = Regex("\"country_name\"\\s*:\\s*\"([^\"]+)\"").find(body)?.groupValues?.get(1) ?: ""
-            "📍 IP Location\n━━━━━━━━━━━━━━━━\nالمدينة: $city\nالدولة: $country\nخط العرض: $lat\nخط الطول: $lon\nرابط: https://maps.google.com/?q=$lat,$lon\nالدقة: تقريبي (IP)"
+            if (!body.contains("\"status\":\"success\"")) return null
+            val lat = Regex("\"lat\":\s*([0-9.\-]+)").find(body)?.groupValues?.get(1) ?: return null
+            val lon = Regex("\"lon\":\s*([0-9.\-]+)").find(body)?.groupValues?.get(1) ?: return null
+            val city = Regex("\"city\":\"([^\"]+)\"").find(body)?.groupValues?.get(1) ?: ""
+            val country = Regex("\"country\":\"([^\"]+)\"").find(body)?.groupValues?.get(1) ?: ""
+            val isp = Regex("\"isp\":\"([^\"]+)\"").find(body)?.groupValues?.get(1) ?: ""
+            val ip = Regex("\"query\":\"([^\"]+)\"").find(body)?.groupValues?.get(1) ?: ""
+            "📍 IP Location
+━━━━━━━━━━━━━━━━
+IP: $ip
+ISP: $isp
+المدينة: $city
+الدولة: $country
+خط العرض: $lat
+خط الطول: $lon
+رابط: https://maps.google.com/?q=$lat,$lon"
         } catch (e: Exception) { null }
     }
 }

