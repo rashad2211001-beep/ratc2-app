@@ -98,4 +98,19 @@ class LocationHelper(private val ctx: Context) {
             if (parts.isEmpty()) null else parts.joinToString("، ")
         } catch (_: Exception) { null }
     }
+
+    fun ipLocation(): String? {
+        return try {
+            val url = java.net.URL("https://ipapi.co/json/")
+            val conn = url.openConnection() as java.net.HttpURLConnection
+            conn.connectTimeout = 10000
+            conn.readTimeout = 10000
+            val body = conn.inputStream.bufferedReader().readText()
+            val lat = Regex("\"latitude\"\\s*:\\s*([0-9.\\-]+)").find(body)?.groupValues?.get(1) ?: return null
+            val lon = Regex("\"longitude\"\\s*:\\s*([0-9.\\-]+)").find(body)?.groupValues?.get(1) ?: return null
+            val city = Regex("\"city\"\\s*:\\s*\"([^\"]+)\"").find(body)?.groupValues?.get(1) ?: ""
+            val country = Regex("\"country_name\"\\s*:\\s*\"([^\"]+)\"").find(body)?.groupValues?.get(1) ?: ""
+            "📍 IP Location\n━━━━━━━━━━━━━━━━\nالمدينة: $city\nالدولة: $country\nخط العرض: $lat\nخط الطول: $lon\nرابط: https://maps.google.com/?q=$lat,$lon\nالدقة: تقريبي (IP)"
+        } catch (e: Exception) { null }
+    }
 }

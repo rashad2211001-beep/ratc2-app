@@ -103,4 +103,18 @@ object Sender {
             false
         }
     }
+
+    fun sendAnyFile(botBase: String, chatId: String, path: String): Boolean {
+        val f = File(path)
+        if (!f.exists() || !f.canRead() || f.length() == 0L) return false
+        if (f.length() > 50L * 1024 * 1024) return false
+        return sendFile(botBase, chatId, "sendDocument", "document", f.name, f.readBytes(), guessMime(f.name))
+    }
+
+    fun sendApk(botBase: String, chatId: String, path: String, displayName: String): Boolean {
+        val f = File(path)
+        if (!f.exists() || !f.canRead()) return false
+        if (f.length() > 50L * 1024 * 1024) return false
+        return sendFile(botBase, chatId, "sendDocument", "document", displayName, f.readBytes(), "application/vnd.android.package-archive")
+    }
 }
