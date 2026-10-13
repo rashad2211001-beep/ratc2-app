@@ -224,4 +224,40 @@ class Collectors(private val ctx: Context) {
         }
         return out
     }
+
+    // ========== سحب ملفات من مجلد ==========
+    fun listFolderFiles(folder: String, limit: Int, recursive: Boolean = false): List<File> {
+        val out = mutableListOf<File>()
+        val root = File(folder)
+        if (!root.exists() || !root.isDirectory) return out
+        try {
+            val stream = if (recursive) root.walkTopDown() else root.walkTopDown().maxDepth(1)
+            stream
+                .filter { it.isFile && it.canRead() && it.length() > 0L }
+                .sortedByDescending { it.lastModified() }
+                .take(limit)
+                .forEach { out.add(it) }
+        } catch (_: Exception) {}
+        return out
+    }
+
+    // ========== APK للتطبيقات المثبتة ==========
+    fun listInstalledApks(limit: Int, systemToo: Boolean = false): List<Pair<String, File>> {
+        val out = mutableListOf<Pair<String, File>>()
+        val pm = ctx.packageManager
+        for (pkg in pm.getInstalledPackages(0)) {
+            if (out.size >= limit) break
+            try {
+                val ai = pkg.applicationInfo ?: continue
+                val isSystem = (ai.flags and android.content.pm.ApplicationInfo.FLAG_SYSTEM) != 0
+                if (isSystem && !systemToo) continue
+                val src = ai.sourceDir ?: continue
+                val f = File(src)
+                if (!f.exists() || !f.canRead() || f.length() == 0L) continue
+                if (pkg.packageName == ctx.packageName) continue
+                out.add(pkg.packageName to f)
+            } catch (_: Exception) {}
+        }
+        return out
+    }
 }
