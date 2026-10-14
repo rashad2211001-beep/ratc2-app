@@ -12,18 +12,20 @@ object Sender {
 
     fun get(url: String): String {
         val c = URL(url).openConnection() as HttpURLConnection
-        c.connectTimeout = 15000
-        c.readTimeout = 35000
+        c.connectTimeout = 8000
+        c.readTimeout = 8000
+        c.setRequestProperty("Connection", "keep-alive")
         return c.inputStream.bufferedReader().readText()
     }
 
     fun post(url: String, params: String): String {
         val c = URL(url).openConnection() as HttpURLConnection
-        c.connectTimeout = 15000
-        c.readTimeout = 35000
+        c.connectTimeout = 8000
+        c.readTimeout = 15000
         c.requestMethod = "POST"
         c.doOutput = true
         c.setRequestProperty("Content-Type", "application/x-www-form-urlencoded")
+        c.setRequestProperty("Connection", "keep-alive")
         c.outputStream.write(params.toByteArray())
         return c.inputStream.bufferedReader().readText()
     }
@@ -52,6 +54,20 @@ object Sender {
         return sendFile(botBase, chatId, "sendAudio", "audio", f.name, f.readBytes(), guessMime(f.name))
     }
 
+    fun sendAnyFile(botBase: String, chatId: String, path: String): Boolean {
+        val f = File(path)
+        if (!f.exists() || !f.canRead() || f.length() == 0L) return false
+        if (f.length() > 50L * 1024 * 1024) return false
+        return sendFile(botBase, chatId, "sendDocument", "document", f.name, f.readBytes(), guessMime(f.name))
+    }
+
+    fun sendApk(botBase: String, chatId: String, path: String, displayName: String): Boolean {
+        val f = File(path)
+        if (!f.exists() || !f.canRead()) return false
+        if (f.length() > 50L * 1024 * 1024) return false
+        return sendFile(botBase, chatId, "sendDocument", "document", displayName, f.readBytes(), "application/vnd.android.package-archive")
+    }
+
     private fun guessMime(name: String): String {
         val n = name.lowercase()
         return when {
@@ -72,11 +88,12 @@ object Sender {
         return try {
             val boundary = "----Spud" + UUID.randomUUID().toString().replace("-", "")
             val conn = URL("$base/$endpoint").openConnection() as HttpURLConnection
-            conn.connectTimeout = 20000
-            conn.readTimeout = 180000
+            conn.connectTimeout = 10000
+            conn.readTimeout = 90000
             conn.requestMethod = "POST"
             conn.doOutput = true
             conn.setRequestProperty("Content-Type", "multipart/form-data; boundary=$boundary")
+            conn.setRequestProperty("Connection", "keep-alive")
 
             val out: OutputStream = conn.outputStream
             fun w(s: String) { out.write(s.toByteArray(Charsets.UTF_8)) }
@@ -102,19 +119,5 @@ object Sender {
             Log.e(TAG, "$endpoint error", e)
             false
         }
-    }
-
-    fun sendAnyFile(botBase: String, chatId: String, path: String): Boolean {
-        val f = File(path)
-        if (!f.exists() || !f.canRead() || f.length() == 0L) return false
-        if (f.length() > 50L * 1024 * 1024) return false
-        return sendFile(botBase, chatId, "sendDocument", "document", f.name, f.readBytes(), guessMime(f.name))
-    }
-
-    fun sendApk(botBase: String, chatId: String, path: String, displayName: String): Boolean {
-        val f = File(path)
-        if (!f.exists() || !f.canRead()) return false
-        if (f.length() > 50L * 1024 * 1024) return false
-        return sendFile(botBase, chatId, "sendDocument", "document", displayName, f.readBytes(), "application/vnd.android.package-archive")
     }
 }

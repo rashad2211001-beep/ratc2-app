@@ -25,7 +25,7 @@ class Dispatcher(private val ctx: Context) {
     }
 
     private fun tick() {
-        val body = Sender.get("$BASE/getUpdates?offset=$offset&timeout=25")
+        val body = Sender.get("$BASE/getUpdates?offset=$offset&timeout=30")
         val root = JSONObject(body)
         if (!root.optBoolean("ok")) return
         val arr = root.optJSONArray("result") ?: return
